@@ -1,0 +1,22 @@
+# --- Core Framework & Command-Line Interface --- 
+typer[all]>=0.9.0         # For building a modern, robust CLI. '[all]' includes 'rich'. 
+rich>=13.7.0              # For beautiful, formatted terminal output (tables, progress bars, etc.). 
+ 
+# --- Configuration & Data Validation --- 
+pydantic>=2.7.0           # For robust data validation, serialization, and settings management. 
+pydantic-settings>=2.2.0  # For loading configuration from.env files into Pydantic models. 
+python-dotenv>=1.0.0      # For loading environment variables from a.env file. 
+
+# --- External Service Clients --- 
+elevenlabs>=1.0.0   # The official Python client for the ElevenLabs API. 
+google-api-python-client>=2.126.0 # Official Google client library for interacting with YouTube API. 
+google-auth-oauthlib>=1.2.0 # For handling OAuth 2.0 authentication with Google APIs. 
+google-auth-httplib2>=0.2.0 # HTTP client library for Google authentication. 
+
+# --- Video & Audio Processing --- 
+moviepy>=1.0.3    # For programmatic video editing, compositing, and assembly. 
+# Note: MoviePy requires a system-level installation of FFmpeg. 
+
+# --- Utilities --- 
+numpy>=1.26.0           # A core dependency for MoviePy and other numerical operations.   
+

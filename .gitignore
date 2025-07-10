@@ -1,0 +1,45 @@
+# --- Environment & Secrets ---
+# Ignore the.env file containing secrets and environment-specific variables.
+.env
+
+# --- Python ---
+# Ignore Python virtual environments.
+.venv/
+venv/
+env/
+
+# Ignore Python bytecode and cache files.
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore distribution and build artifacts.
+/build/
+/dist/
+*.egg-info/
+*.egg
+
+# --- Project-Specific ---
+# Ignore the 'projects' directory, which contains all generated content,
+# user-provided assets, and final video outputs.
+/projects/
+
+# Ignore IDE and editor-specific files.
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# --- OS-specific ---
+# Ignore macOS-specific files.
+.DS_Store
+
+# Ignore Windows-specific files.
+Thumbs.db
+
+# --- Testing & Coverage ---
+# Ignore test reports and coverage data.
+.pytest_cache/
+.coverage
+htmlcov/
