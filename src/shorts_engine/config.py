@@ -15,11 +15,11 @@ class Settings(BaseSettings):
     # --- ElevenLabs API Configuration ---
     # A list of your API keys for the ElevenLabs Text-to-Speech service.
     # The app will expect a comma-separated string in the.env file.
-    ELEVENLABS_API_KEYS: List
+    ELEVENLABS_API_KEYS: List = []
 
     # --- Google API Configuration ---
     # Your API key for Google services, such as the YouTube Data API.
-    GOOGLE_API_KEY: SecretStr
+    GOOGLE_API_KEY: SecretStr = SecretStr("")
 
     # --- Project Directory Configuration ---
     # The root directory where all video project folders will be stored.
