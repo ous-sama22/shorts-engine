@@ -43,3 +43,4 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+read_files.py
