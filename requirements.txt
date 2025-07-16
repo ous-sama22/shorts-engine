@@ -22,5 +22,6 @@ numpy>=1.26.0           # A core dependency for MoviePy and other numerical oper
 pydub>=0.25.1           # For audio processing and manipulation.
 ffmpeg-python>=0.2.0    # For interacting with FFmpeg from Python.
 pyperclip>=1.8.2         # For clipboard operations (copy/paste text).
+docker>=6.1.0
 
 

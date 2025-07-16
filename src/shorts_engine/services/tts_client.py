@@ -9,6 +9,9 @@ import random
 from typing import Iterator, Optional
 import base64 
 import json
+import os
+import subprocess
+import tempfile
 
 from elevenlabs import VoiceSettings as ElevenLabsVoiceSettings
 from elevenlabs.client import ElevenLabs
@@ -17,6 +20,7 @@ from rich.console import Console
 from..core.models import Blueprint, TTSModelId, VoiceSettings
 from..config import settings
 from pydub import AudioSegment
+from .docker_sandbox import DockerSandboxManager
 
 # Initialize a console for rich logging
 console = Console()
@@ -30,24 +34,38 @@ class TTSClient:
     A client for interacting with the ElevenLabs Text-to-Speech API.
 
     This class manages API key rotation and caching of generated audio files
-    to optimize performance and cost.
+    to optimize performance and cost. Each API key runs in its own Docker sandbox.
     """
 
     def __init__(self):
-        """Initializes the TTSClient with API keys from settings."""
+        """Initializes the TTSClient with API keys from settings and Docker sandbox manager."""
         api_keys = settings.get_api_keys()
         if not api_keys:
             raise ValueError("No ElevenLabs API keys found in configuration.")
         self._key_cycle: Iterator[str] = itertools.cycle(api_keys)
         self._active_client: ElevenLabs
         self._current_key: str = ""
+        self._sandbox_manager = DockerSandboxManager()
         self._reinitialize_client()
 
     def _reinitialize_client(self):
-        """Initializes or re-initializes the ElevenLabs client with the next API key."""
+        """
+        Initializes or re-initializes the ElevenLabs client with the next API key
+        and creates a new Docker sandbox for isolation.
+        """
         self._current_key = next(self._key_cycle)
+        
+        # Create a new sandbox for this API key
+        self._sandbox_manager.switch_to_api_key(self._current_key)
+        
+        # Initialize the ElevenLabs client with the new API key
         self._active_client = ElevenLabs(api_key=self._current_key)
-        console.log(f"TTSClient initialized with a new API key.")
+        console.log(f"TTSClient initialized with a new API key in a fresh sandbox.")
+
+    def __del__(self):
+        """Clean up Docker resources when the TTSClient is destroyed."""
+        if hasattr(self, '_sandbox_manager'):
+            self._sandbox_manager.cleanup()
 
     def generate_and_save_audio_for_project(
         self,
@@ -177,36 +195,80 @@ class TTSClient:
         # Attempt to generate audio, cycling through keys on failure
         for _ in range(len(settings.get_api_keys())):
             try:
-                # To get timestamps, we need to specify a model that supports it
-                # and the correct output format.
-                response = self._active_client.text_to_speech.convert_with_timestamps(
-                    voice_id=voice_id,
-                    text=script,
-                    voice_settings=api_voice_settings,
-                    model_id=model_id.value,
-                    previous_text=previous_text,
-                    next_text=next_text
+                # Create a temporary script file in the current directory
+                with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.py') as script_file:
+                    script_file_path = script_file.name
+                    script_file.write(f"""
+import json
+import base64
+from elevenlabs import VoiceSettings, Client
+
+# Initialize client with API key (provided by Docker environment)
+api_key = "{self._current_key}"
+client = Client(api_key=api_key)
+
+# Prepare request parameters
+voice_id = "{voice_id}"
+text = {json.dumps(script)}  # JSON encode to handle special characters
+model_id = "{model_id.value}"
+previous_text = {json.dumps(previous_text) if previous_text else "None"}
+next_text = {json.dumps(next_text) if next_text else "None"}
+
+voice_settings = VoiceSettings(
+    speed={voice_settings.speed}
+)
+
+# Make the API call
+response = client.text_to_speech.convert_with_timestamps(
+    voice_id=voice_id,
+    text=text,
+    voice_settings=voice_settings,
+    model_id=model_id,
+    previous_text=previous_text,
+    next_text=next_text
+)
+
+# Prepare the result
+result = {{
+    "audio_base_64": base64.b64encode(response.audio).decode('utf-8'),
+    "alignment": response.alignment.model_dump() if response.alignment else None
+}}
+
+# Print the result as JSON
+print(json.dumps(result))
+""")
+
+                # Execute the script in the sandbox
+                result_json = self._sandbox_manager.execute_in_sandbox(
+                    self._current_key, 
+                    f"python {script_file_path}"
                 )
-
-                audio_data = bytearray()
-                timestamps_data = []
-
-                audio_data = base64.b64decode(response.audio_base_64)
-
-                timestamps_data = response.alignment.model_dump() if response.alignment is not None else {}
-
-                # Save the audio file
-                with open(audio_path, "wb") as f:
-                    f.write(audio_data)
-
-                # Save the timestamps to a corresponding json file
-                timestamps_path = audio_path.with_suffix(".json")
-                with open(timestamps_path, "w", encoding='utf-8') as f:
-                    json.dump(timestamps_data, f, indent=2)
-
-                console.log(f"[green]Successfully generated and cached audio:[/green] {audio_path.name}")
-                console.log(f"[green]Successfully saved timestamps to:[/green] {timestamps_path.name}")
-                return audio_path
+                
+                # Clean up the temporary file
+                os.unlink(script_file_path)
+                
+                # Parse the result
+                try:
+                    result = json.loads(result_json)
+                    audio_data = base64.b64decode(result["audio_base_64"])
+                    timestamps_data = result["alignment"] if result["alignment"] else {}
+                    
+                    # Save the audio file
+                    with open(audio_path, "wb") as f:
+                        f.write(audio_data)
+                    
+                    # Save the timestamps to a corresponding json file
+                    timestamps_path = audio_path.with_suffix(".json")
+                    with open(timestamps_path, "w", encoding='utf-8') as f:
+                        json.dump(timestamps_data, f, indent=2)
+                    
+                    console.log(f"[green]Successfully generated and cached audio:[/green] {audio_path.name}")
+                    console.log(f"[green]Successfully saved timestamps to:[/green] {timestamps_path.name}")
+                    return audio_path
+                except json.JSONDecodeError:
+                    console.log(f"[yellow]Failed to parse result JSON: {result_json}[/yellow]")
+                    self._reinitialize_client()
+                    continue
 
             except Exception as e:
                 console.log(f"[yellow]API call failed with key ending in '...{self._current_key[-4:]}'. Error: {e}. Trying next key.[/yellow]")
