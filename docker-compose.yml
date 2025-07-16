@@ -19,19 +19,3 @@ services:
     # Uncomment the line below for development mode
     # volumes:
     #   - .:/app
-    
-  # Optional: Add a development service with source code mounted
-  shorts-engine-dev:
-    build: .
-    container_name: shorts-engine-dev
-    volumes:
-      - .:/app
-      - ./projects:/app/projects
-      - ./assets:/app/assets
-      - ./.env:/app/.env:ro
-    environment:
-      - PYTHONUNBUFFERED=1
-    # This service is for development - mounts the entire codebase
-    command: ["--help"]
-    profiles:
-      - dev
