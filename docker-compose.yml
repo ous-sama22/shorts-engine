@@ -1,0 +1,37 @@
+services:
+  shorts-engine:
+    build: .
+    container_name: shorts-engine
+    volumes:
+      # Mount the projects directory to persist generated videos
+      - ./projects:/app/projects
+      # Mount the assets directory for fonts and static assets
+      - ./assets:/app/assets
+      # Mount .env file for API keys and configuration
+      - ./.env:/app/.env:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+    # Override the default command for interactive use
+    # Remove this if you want to use the default --help
+    # command: ["run-all", "test_project", "AI technology", "--version", "A"]
+    
+    # For development, you might want to mount the entire source code
+    # Uncomment the line below for development mode
+    # volumes:
+    #   - .:/app
+    
+  # Optional: Add a development service with source code mounted
+  shorts-engine-dev:
+    build: .
+    container_name: shorts-engine-dev
+    volumes:
+      - .:/app
+      - ./projects:/app/projects
+      - ./assets:/app/assets
+      - ./.env:/app/.env:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+    # This service is for development - mounts the entire codebase
+    command: ["--help"]
+    profiles:
+      - dev

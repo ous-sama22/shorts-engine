@@ -17,18 +17,74 @@ Shorts Engine streamlines the creation of short-form videos through a series of 
 
 ## Installation
 
-### Prerequisites
+### Option 1: Docker Installation (Recommended)
 
-- Python 3.10+
-- FFmpeg (required for video processing)
+Docker provides an isolated environment with all dependencies pre-installed, including FFmpeg.
 
+#### Prerequisites
+- Docker Desktop (Windows/Mac) or Docker Engine (Linux)
+- Docker Compose
+
+#### Quick Setup
 ```bash
 # Clone the repository
 git clone https://github.com/ous-sama22/shorts-engine.git
 cd shorts-engine
 
+# Run the setup script
+# On Linux/Mac:
+chmod +x docker-setup.sh && ./docker-setup.sh
+
+# On Windows:
+docker-setup.bat
+
+# Edit the .env file with your API keys
+# Linux/Mac: nano .env
+# Windows: notepad .env
+
+# Test the installation
+docker-compose run --rm shorts-engine --help
+```
+
+#### Docker Usage Examples
+```bash
+# Create a new project
+docker-compose run --rm shorts-engine new "my_project" "AI technology"
+
+# Generate audio for existing project
+docker-compose run --rm shorts-engine generate-audio "my_project" --version A
+
+# Run the complete pipeline
+docker-compose run --rm shorts-engine run-all "my_project" "AI technology" --version A
+
+# Development mode (live code changes)
+docker-compose --profile dev run --rm shorts-engine-dev --help
+```
+
+### Option 2: Local Installation
+
+For local development or if you prefer not to use Docker:
+
+##### Prerequisites
+- Python 3.10+
+- FFmpeg (required for video processing)
+
+#### Setup
+```bash
+# Clone the repository
+git clone https://github.com/ous-sama22/shorts-engine.git
+cd shorts-engine
+
+# Create virtual environment (recommended)
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
 # Install dependencies
 pip install -r requirements.txt
+
+# Copy environment template and configure
+cp .env.example .env
+# Edit .env with your API keys
 ```
 
 ## Usage

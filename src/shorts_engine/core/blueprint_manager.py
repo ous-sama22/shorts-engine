@@ -10,6 +10,7 @@ from rich.prompt import Prompt
 
 from ..config import settings
 from .models import Blueprint, DraftBlueprint, KenBurnsStyle, TTSModelId, ViralFormula, Shot, VoiceSettings, TextStyle, Scene
+import pyperclip
 
 class BlueprintManager:
     """
@@ -192,7 +193,7 @@ You must adhere strictly to the following JSON structure. Do not add any extra k
         self.console.print(f"\n[bold]💧 Processing Draft Blueprint '{draft_blueprint.project_name}' - Version '{draft_blueprint.version}'[/bold]\n")
 
         # ask the user to enter the folder to look for the assets
-        initial_asset_folder = Prompt.ask("[yellow]▶[/yellow] Enter default download folder path where the assets will be downloaded after you generate them.")
+        initial_asset_folder = Prompt.ask(f"[yellow]▶[/yellow] Enter default download folder path where the assets will be downloaded after you generate them. (default: {str(Path.home() / 'Downloads')})", default= str(Path.home() / "Downloads"))
         initial_asset_folder_path = initial_asset_folder
 
         Shots = []
@@ -200,25 +201,29 @@ You must adhere strictly to the following JSON structure. Do not add any extra k
             self.console.print(f"\n[bold yellow]Shot {i+1}[/bold yellow]: {shot.script_text}")
             visual = shot.visual
             self.console.print(Panel(
-                "[bold]1. Copy the entire text block below (between the dashed lines).\n2. Paste it into your preferred asset generation tool.[/bold]",
+                "[bold]1. The prompt had copied, paste the entire text block below (between the dashed lines. It already being copied, no need to copy it again).\n2. Paste it into your preferred asset generation tool.[/bold]",
                 title=f"[bold yellow]Type: {visual.visual_type}[/bold yellow]",
                 border_style="yellow",
                 padding=(1, 2)
             ))
 
+            # Copy the prompt to the clipboard
+            pyperclip.copy(visual.prompt_or_filename)
+
             # Print the actual prompt as clean text, framed by separators for clarity.
-            # This is the part the user WILL copy.
+            # This is the prompt for the user to see.
             self.console.print("\n" + "-"*80)
             self.console.print(visual.prompt_or_filename)
             self.console.print("-" * 80 + "\n")
 
             self.console.print("\n[bold green]Waiting for your input...[/bold green]")
+            self.console.print("\n[bold green]Waiting for your input...[/bold green]")
                     
             generation_completed = Prompt.ask(
-                f"[yellow]▶[/yellow] When you complete the asset generation, type 'y' to continue or 'N' To cancel the process.",
+                f"[yellow]▶[/yellow] When you complete the asset generation, click any key to continue or 'N' To cancel the process.",
             )
 
-            if generation_completed.lower() != 'y':
+            if generation_completed.lower() == 'n':
                 self.console.print("[bold red]Process cancelled by user.[/bold red]")
                 # confirm if the user wants to cancel the process
                 if Prompt.ask("[yellow]▶[/yellow] Are you sure you want to cancel the process? (y/n)", default="n").lower() != 'y':
@@ -246,11 +251,12 @@ You must adhere strictly to the following JSON structure. Do not add any extra k
             asset_files.sort(key=lambda f: f.stat().st_mtime, reverse=True) 
             asset_file = asset_files[0]  # Get the most recent file
             final_filename = asset_file.name
+            new_filename = "visual_" + str(i+1) + "_" + draft_blueprint.version + Path(final_filename).suffix
 
-            shutil.copy2(asset_file, settings.PROJECTS_ROOT_DIR / draft_blueprint.project_name / "assets" / final_filename)
+            shutil.copy2(asset_file, settings.PROJECTS_ROOT_DIR / draft_blueprint.project_name / "assets" / new_filename)
 
             # He check if the file exists
-            asset_path = settings.PROJECTS_ROOT_DIR / draft_blueprint.project_name / "assets" / final_filename
+            asset_path = settings.PROJECTS_ROOT_DIR / draft_blueprint.project_name / "assets" / new_filename
             if not asset_path.exists():
                 self.console.print(f"[bold red]Error:[/bold red] Asset file [cyan]{final_filename}[/cyan] does not exist in the assets folder.")
                 # prompt the user to re-enter the filename
@@ -343,11 +349,14 @@ You must adhere strictly to the following JSON structure. Do not add any extra k
         )
 
         self.console.print(Panel(
-            "[bold]1. Copy the entire text block below (between the dashed lines).\n2. Paste it into your preferred LLM as the system prompt.[/bold]",
+            "[bold]1. Paste the entire text block below (between the dashed lines).\n2. Paste it into your preferred LLM as the system prompt.[/bold]",
             title="[bold yellow]ACTION REQUIRED[/bold yellow]",
             border_style="yellow",
             padding=(1, 2)
         ))
+
+        # Copy the prompt to the clipboard
+        pyperclip.copy(master_prompt)
 
         # Print the actual prompt as clean text, framed by separators for clarity.
         # This is the part the user WILL copy.
