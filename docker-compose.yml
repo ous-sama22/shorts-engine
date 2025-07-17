@@ -9,6 +9,8 @@ services:
       - ./assets:/app/assets
       # Mount .env file for API keys and configuration
       - ./.env:/app/.env:ro
+      # Mount Docker socket to allow container to use Docker
+      - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - PYTHONUNBUFFERED=1
     # Override the default command for interactive use
